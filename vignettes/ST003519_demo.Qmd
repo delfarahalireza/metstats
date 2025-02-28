@@ -1,0 +1,624 @@
+---
+title: "metstats demo - Metabolomics Workbench ST003519"
+format: html
+engine: knitr
+author: ""
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+vignette: |
+  %\VignetteIndexEntry{ST003519_demo}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+<style type="text/css">
+  body {
+  font-size: 14pt;
+  }
+h1.title {
+  font-size: 30pt;
+  }
+  h2.title {
+  font.size: 18pt;
+  }
+</style>
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  width = 80,
+  fig.height = 8,
+  fig.width = 12,
+  echo = FALSE,
+  cache = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+```{r libraries}
+library(tidyverse)
+library(plyr)
+library(dplyr)
+library(pheatmap)
+library(romic)
+library(ggplot2)
+library(gridExtra)
+library(utils)
+library(data.table)
+library(scales)
+library(qvalue)
+library(googlesheets4)
+library(RCy3)
+library(htmlwidgets)
+library(rsconnect)
+library(plotly)
+library(claman)
+library(metstats)
+```
+
+```{r experiment specific info}
+# the only chunk to change for a new dataset
+mzrolldb_file_path_pos <- "MZROLLDB_FILE_NAME_POS.mzrollDB"
+mzrolldb_file_path_neg <- "ST003519.mzrollDB"
+```
+
+```{r analysis type}
+## determine analysis type
+if (!grepl("FILE_NAME_POS", mzrolldb_file_path_pos) &&
+  !grepl("FILE_NAME_NEG", mzrolldb_file_path_neg)) {
+  analysis_type <- "dual_mode"
+  mzrolldb_file_path <- mzrolldb_file_path_pos
+} else if (!grepl("FILE_NAME_POS", mzrolldb_file_path_pos) &&
+  grepl("FILE_NAME_NEG", mzrolldb_file_path_neg)) {
+  analysis_type <- "pos_mode"
+  mzrolldb_file_path <- mzrolldb_file_path_pos
+} else if (grepl("FILE_NAME_POS", mzrolldb_file_path_pos) &&
+  !grepl("FILE_NAME_NEG", mzrolldb_file_path_neg)) {
+  analysis_type <- "neg_mode"
+  mzrolldb_file_path <- mzrolldb_file_path_neg
+} else {
+  stop("Please properly assign mzrolldb file paths")
+}
+
+if (!grepl(".mzrollDB$", mzrolldb_file_path_pos) &&
+  !grepl(".mzrollDB$", mzrolldb_file_path_neg)) {
+  stop("Filenames should end with .mzrollDB")
+}
+```
+
+```{r quant variable}
+## determine quant variable for the analysis
+## run one of the following lines for non-normalized log2_abundance values
+## or median-polished (Probabilistic Quotient Normalization)
+
+## quant_var <- "median_log2_abundance"
+quant_var <- "log2_abundance"
+
+## if another quant variable is desired for the analysis,
+## assign the string name to "quant_var" variable
+## For example:
+## quant_var <- "drift_corrected_abundance"
+```
+
+```{r metadata}
+## import metadata
+metadata <- readRDS("ST003519_metadata.rds")
+```
+
+```{r variables and lm formula}
+## Variable names for PCA
+var_names <- c("treatment")
+
+## Formula for regression model
+lm_formula <- paste(var_names, collapse = " + ")
+```
+
+```{r themes}
+box_theme <- theme(
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  panel.border = element_rect(colour = "black", fill = NA, size = 1),
+  panel.background = element_blank(),
+  axis.line = element_line(colour = "black", size = 0),
+  axis.text.x = element_text(
+    size = 7, angle = 90, colour = "black",
+    face = "bold", vjust = 0.5
+  ),
+  axis.text.y = element_text(size = 7, colour = "black", face = "bold"),
+  axis.ticks.x = element_line(colour = "black"),
+  axis.ticks.y = element_line(colour = "black"),
+  axis.title.y = element_text(size = 12, face = "bold", colour = "black"),
+  axis.title.x = element_text(size = 12, face = "bold", colour = "black"),
+  legend.text = element_text(size = 12, face = "bold"),
+  legend.title = element_blank(),
+  plot.title = element_text(size = 12, face = "bold"),
+  legend.position = "none"
+)
+
+pca_theme <- theme(
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  panel.border = element_rect(colour = "black", fill = NA, size = 1),
+  panel.background = element_blank(),
+  axis.line = element_line(colour = "black", size = 0.65),
+  axis.text.x = element_text(
+    size = 9, angle = 0,
+    colour = "black", face = "bold"
+  ),
+  axis.text.y = element_text(size = 9, colour = "black", face = "bold"),
+  axis.ticks.x = element_line(colour = "black"),
+  axis.ticks.y = element_line(colour = "black"),
+  axis.title.y = element_text(size = 12, face = "bold", colour = "black"),
+  axis.title.x = element_text(size = 12, face = "bold", colour = "black"),
+  legend.text = element_text(size = 12, face = "bold"),
+  plot.title = element_text(size = 12, face = "bold"),
+  strip.text.x = element_text(size = 2, face = "bold")
+)
+```
+
+```{r merge and normalize mzroll, include = FALSE, message = FALSE}
+## merge mzrolldb with metadata and generate triple_omic object
+## apply median-polishing
+if (analysis_type == "dual_mode") {
+  ## pos and neg mode analysis
+  mzroll_db_paths <- tibble::tibble(
+    method_tag = c("pos", "neg"),
+    mzroll_db_path = c(
+      mzrolldb_file_path_pos,
+      mzrolldb_file_path_neg
+    )
+  )
+
+  data_mzroll <- claman::process_mzroll_multi(
+    mzroll_paths = mzroll_db_paths,
+    samples_tbl = metadata,
+    id_strings = c("SampleName"),
+    only_identified = TRUE,
+    validate = TRUE,
+    exact = FALSE
+  ) %>%
+    claman::floor_peaks(12) %>%
+    claman::normalize_peaks(
+      normalization_method = "median polish",
+      quant_peak_varname = "log2_abundance",
+      norm_peak_varname = "median_log2_abundance"
+    )
+} else {
+  ## single polarity mode analysis
+  data_mzroll <- claman::process_mzroll(
+    mzroll_db_path = mzrolldb_file_path,
+    only_identified = TRUE,
+    validate = TRUE,
+    method_tag = ""
+  ) %>%
+    claman::floor_peaks(12) %>%
+    claman::merge_samples_tbl(
+      samples_tbl = metadata,
+      id_strings = c("SampleName"),
+      exact = FALSE
+    ) %>%
+    claman::normalize_peaks(
+      normalization_method = "median polish",
+      quant_peak_varname = "log2_abundance",
+      norm_peak_varname = "median_log2_abundance"
+    )
+}
+
+data_triple <- romic::triple_to_tidy(data_mzroll)
+
+data_triple$data <- data_triple$data %>%
+  dplyr::mutate(feature = paste(data_triple$data$compoundName,
+    data_triple$data$adductName,
+    sep = " "
+  ))
+```
+
+```{r features and constants, include = FALSE, message = FALSE}
+features_list <- data_mzroll$features %>%
+  dplyr::mutate(feature = paste(data_mzroll$features$compoundName,
+    data_mzroll$features$adductName,
+    sep = " "
+  )) %>%
+  dplyr::mutate(quality_num = case_when(
+    searchTableName == "Bookmarks" ~ 1,
+    grepl("g", label) ~ 2,
+    TRUE == TRUE ~ 3
+  )) %>%
+  dplyr::filter(quality_num <= 2) %>%
+  dplyr::arrange(feature, quality_num) %>%
+  dplyr::group_by(feature, tagString) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup()
+
+feature_ids <- unique(features_list$groupId)
+condition_names <- unique(metadata$Condition)
+
+## get number of samples
+n_samples <- length(unique(data_mzroll$samples$sampleId))
+```
+
+::: {.panel-tabset}
+
+## PCA
+```{r pca, message = FALSE, fig.width = 5, fig.height = 5}
+## generate PCA data in tomic structure
+pca_tomic <- data_mzroll
+
+for (i in var_names) {
+  pca_tomic$samples[[i]] <- as.character(pca_tomic$samples[[i]])
+}
+
+pca_plots_widget <- htmltools::tagList()
+
+if (length(var_names) < 2) {
+  pca_plots_widget[[1]] <- plotly::as_widget(plotly::ggplotly(
+    pca_tomic %>%
+      romic::add_pcs(
+        value_var = as.character(rlang::sym(quant_var)),
+        npcs = 5,
+        missing_val_method = "drop_samples"
+      ) %>%
+      purrr::pluck("samples") %>%
+      ggplot2::ggplot(aes_string(
+        x = rlang::sym(grep("PC1",
+          colnames(.),
+          value = TRUE
+        )),
+        y = rlang::sym(grep("PC2",
+          colnames(.),
+          value = TRUE
+        )),
+        color = rlang::sym(var_names[1]),
+        text = "SampleName"
+      )) +
+      geom_point() +
+      scale_shape_manual(values = seq(0, 100)) +
+      pca_theme
+  ))
+  pca_plots_widget
+} else {
+  counter <- 0
+  if (length(var_names) < 2) {
+    stop("At least two variables are required for PCA, please check metadata")
+  } else {
+    for (i in 1:length(var_names)) {
+      if (i == length(var_names)) {
+        break
+      }
+      for (j in (i + 1):length(var_names)) {
+        if (i == j) {
+          next
+        }
+        counter <- counter + 1
+        pca_plots_widget[[counter]] <- plotly::as_widget(plotly::ggplotly(
+          pca_tomic %>%
+            romic::add_pcs(
+              value_var = as.character(rlang::sym(quant_var)),
+              npcs = 5,
+              missing_val_method = "drop_samples"
+            ) %>%
+            purrr::pluck("samples") %>%
+            ggplot2::ggplot(aes_string(
+              x = rlang::sym(grep("PC1", colnames(.), value = TRUE)),
+              y = rlang::sym(grep("PC2", colnames(.), value = TRUE)),
+              color = rlang::sym(var_names[i]),
+              shape = rlang::sym(var_names[j]),
+              text = "SampleName"
+            )) +
+            geom_point() +
+            scale_shape_manual(values = seq(0, 100)) +
+            pca_theme
+        ))
+      }
+    }
+    pca_plots_widget
+  }
+}
+```
+
+```{r regression, include = FALSE, message = FALSE}
+data_lm <- claman::diffex_mzroll(data_mzroll,
+  value_var = as.character(rlang::sym(quant_var)),
+  test_model = lm_formula
+) %>%
+  dplyr::filter(term != "(Intercept)") %>%
+  dplyr::left_join(
+    features_list %>%
+      dplyr::select(groupId, feature),
+    by = "groupId"
+  ) %>%
+  dplyr::relocate(feature, .after = groupId) %>%
+  dplyr::rename(compoundName = feature) %>%
+  dplyr::filter(!is.na(compoundName))
+
+## The constant numbers below are empirical to make the output
+## more easily readable for different number of samples and conditions
+if (length(unique(data_lm$term)) == 1) {
+  volcano_width <- 8
+  volcano_height <- 5
+} else if (length(unique(data_lm$term)) == 2) {
+  volcano_width <- 12
+  volcano_height <- 6
+} else {
+  volcano_width <- 12
+  volcano_height <- 12 * length(unique(data_lm$term)) / 4
+}
+
+## take top 500 unique features based on the regression analysis
+## to visualize on the heatmap and box plots.
+## If number of unique features is less than 500,
+## all of the features will be retained.
+top_features <- data_lm %>%
+  dplyr::arrange(qvalue) %>%
+  dplyr::group_by(compoundName) %>%
+  dplyr::distinct(.keep_all = TRUE) %>%
+  dplyr::ungroup() %>%
+  dplyr::slice(1:500) %>%
+  dplyr::select(compoundName) %>%
+  dplyr::rename(feature = compoundName)
+
+## get number of samples and features
+n_conditions <- length(unique(data_mzroll$samples$Condition))
+n_features <- nrow(top_features)
+
+## Constants determined to make the output more easily readable
+## for different number of samples and conditions
+heat_width <- 0.15 * n_samples + 3
+heat_height <- 0.07 * n_features + 3
+
+box_width <- 0.15 * n_conditions + 3
+box_height <- box_width * n_features / 4
+```
+
+## Volcano Plots
+```{r volcano plots, message = FALSE, fig.width = volcano_width[1], fig.height = volcano_height[1]}
+plotly::ggplotly(claman::plot_volcano(data_lm,
+  max_p_trans = 10,
+  FDR_cutoff = 0.01
+) +
+  facet_wrap(~term,
+    ncol = 2,
+    nrow = ceiling(length(unique(data_lm$term)) / 2),
+    scales = "free", labeller = label_both
+  ) +
+  theme(
+    axis.title.y = element_blank(),
+    aspect.ratio = 1
+  )) %>%
+  layout(
+    yaxis = list(title = "-log10 (p-value)"),
+    title = list(text = lm_formula)
+  )
+```
+
+## Heatmap
+```{r heatmap, dpi=100, fig.width = heat_width[1], fig.height = heat_height[1]}
+## pivot data from long to wide
+data_heatmap <- data_triple$data %>%
+  dplyr::filter(groupId %in% unique(features_list$groupId)) %>%
+  dplyr::select(feature, !!rlang::sym(quant_var), SampleName) %>%
+  tidyr::spread(key = SampleName, value = !!rlang::sym(quant_var)) %>%
+  tibble::remove_rownames() %>%
+  tibble::column_to_rownames(var = "feature")
+
+## make heatmap
+pheatmap(data_heatmap,
+  scale = "row",
+  fontsize_col = 8,
+  fontsize_row = 6,
+  color = colorRampPalette(c("navy", "white", "red"))(50),
+  cluster_rows = TRUE,
+  cluster_cols = FALSE,
+  cellwidth = 10,
+  cellheight = 10
+)
+```
+
+## Box Plots
+```{r box plots, fig.width = box_width[1], fig.height = box_height[1]}
+box_data <- data_triple$data %>%
+  dplyr::filter(groupId %in% unique(features_list$groupId)) %>%
+  dplyr::filter(feature %in% top_features$feature) %>%
+  dplyr::mutate(Condition = factor(Condition, level = unique(Condition)))
+
+if ((grepl("M004B", mzrolldb_file_path_neg) ||
+  grepl("M005B", mzrolldb_file_path_pos))) {
+  box_data <- box_data %>%
+    dplyr::mutate(feature = paste(compoundName,
+      adductName,
+      sep = "_"
+    ))
+}
+
+box_data <- with(box_data, box_data[order(feature), ])
+
+plotly::as_widget(plotly::ggplotly(
+  ggplot2::ggplot(
+    data = box_data,
+    mapping = aes(
+      x = Condition,
+      y = !!rlang::sym(quant_var)
+    )
+  ) +
+    geom_boxplot(aes(color = Condition)) +
+    geom_point(size = 1, stroke = 0.2) +
+    xlab("") +
+    ylab("") +
+    box_theme +
+    facet_wrap(~feature,
+      ncol = 2,
+      nrow = ceiling(n_features / 2),
+      scales = "free",
+      labeller = label_both
+    ) +
+    theme(
+      strip.text = element_text(size = 10, face = "bold"),
+      strip.background = element_blank()
+    )
+))
+```
+
+```{r network plots, message = FALSE, warning = FALSE, eval = FALSE}
+id_mapping <- read.csv("ST003519_id_mapping.csv")
+
+## Generate global network plots of log2(Condition/RefCondition)
+for (i in condition_names) {
+  curr_cond <- i
+  curr_ref_cond <- unique(metadata$RefCondition[metadata$Condition == i])
+  if (curr_cond == curr_ref_cond) {
+    next
+  }
+
+  cytoscape_data <- data_triple$data %>%
+    dplyr::rename(feature_name = compoundName) %>%
+    dplyr::filter(Condition == curr_cond | Condition == curr_ref_cond) %>%
+    dplyr::group_by(feature_name, Condition) %>%
+    dplyr::summarize(mean = mean(log2_abundance)) %>%
+    tidyr::pivot_wider(names_from = Condition, values_from = mean) %>%
+    dplyr::ungroup()
+
+  ## calculate log2(FC)
+  network_metric <- paste("log2", curr_cond, curr_ref_cond, sep = "_")
+  cytoscape_data[, network_metric] <- cytoscape_data %>%
+    select(curr_cond) - cytoscape_data %>%
+    select(curr_ref_cond)
+
+  metstats::cytoscape_plot_node_color(
+    cytoscape_data,
+    id_mapping,
+    network_metric,
+    network_name = "1Global",
+    metric_range = 3
+  )
+
+  fitContent(network = "1Global")
+  file_path <- paste(getwd(), network_metric, sep = "/")
+  exportImage(file_path, "PNG", zoom = 500, network = "1Global")
+}
+```
+
+## Network
+```{r pathways color, message = FALSE, warning = FALSE, results = "asis", out.width = "300px", dpi=50}
+## Color legend for pathways
+files <- list.files(
+  path = getwd(),
+  pattern = "color.+png",
+  full.names = TRUE
+)
+
+knitr::include_graphics(files)
+```
+
+```{r pathways shape, message = FALSE, warning = FALSE, results = "asis", out.width = "100px", dpi=50}
+## Shape legend for pathways
+files <- list.files(
+  path = getwd(),
+  pattern = "shape.+png",
+  full.names = TRUE
+)
+
+knitr::include_graphics(files)
+```
+
+```{r pathways, message = FALSE, warning = FALSE, results = "asis", out.width = "6000px", dpi=200}
+## Pathway representation for the condition with the highest number of significant changes in pairwise regression analysis
+files <- list.files(
+  path = getwd(),
+  pattern = "log2.+png",
+  full.names = TRUE
+)
+
+knitr::include_graphics(files)
+```
+
+```{r clean tables, message = FALSE, warning = FALSE}
+complete_data <- data_triple$data %>%
+  filter(groupId %in% unique(features_list$groupId))
+
+columns_remove <- c(
+  "smiles", "adductName", "tagString", "is_unknown",
+  "mz", "rt", "compoundDB", "searchTableName", "label",
+  "peak_label", "method_tag", "sampleId", "filename",
+  "samples_tbl_row", "centered_log2_abundance", "group_sample_id",
+  "tube label (Used in MS Sequence Sample Name)", "tube label"
+)
+
+columns_keep <- c(
+  "groupId", "compoundName", "feature", "SampleName", "Condition",
+  "log2_abundance", "median_log2_abundance",
+  as.character(rlang::sym(quant_var))
+)
+
+## data in long-format
+table_long <- complete_data %>%
+  dplyr::select(columns_keep)
+
+table_long <- table_long %>%
+  dplyr::mutate_at(
+    vars(colnames(table_long %>%
+      dplyr::select(
+        log2_abundance,
+        median_log2_abundance,
+        !!rlang::sym(quant_var)
+      ))),
+    ~ round(., 2)
+  )
+
+## data in wide-format
+table_wide <- table_long %>%
+  dplyr::select(feature, !!rlang::sym(quant_var), SampleName) %>%
+  tidyr::spread(key = SampleName, value = !!rlang::sym(quant_var)) %>%
+  tibble::column_to_rownames(var = "feature") %>%
+  dplyr::mutate(feature = rownames(.)) %>%
+  dplyr::relocate(feature)
+
+table_wide <- table_wide %>%
+  dplyr::mutate_at(vars(colnames(table_wide %>% select(-feature))), ~ round(., 2))
+
+## lm data
+table_lm <- data_lm %>%
+  dplyr::mutate_at(vars(estimate, std.error, statistic), ~ round(., 2)) %>%
+  dplyr::mutate(across(
+    .cols = c(p.value, qvalue),
+    .fns = ~ format(., scientific = TRUE, digits = 2)
+  ))
+```
+
+```{r datatable_with_buttons, message = FALSE, warning = FALSE}
+datatable_lm <- DT::datatable(table_lm,
+  extensions = "Buttons",
+  options = list(
+    dom = "Bfrtip",
+    buttons = list("csv")
+  )
+)
+
+datatable_long <- DT::datatable(table_long,
+  extensions = "Buttons",
+  options = list(
+    dom = "Bfrtip",
+    buttons = list("csv")
+  )
+)
+
+datatable_wide <- DT::datatable(table_wide,
+  extensions = "Buttons",
+  options = list(
+    dom = "Bfrtip",
+    buttons = list("csv")
+  )
+)
+```
+
+## Data Tables
+```{r upload tables, message = FALSE, warning = FALSE}
+datatable_lm
+datatable_long
+datatable_wide
+```
+
+:::
