@@ -2,7 +2,7 @@
 % Please edit documentation in R/missingness.R
 \name{imputed_comparisons}
 \alias{imputed_comparisons}
-\title{Find comparisons that have at least one imputed value}
+\title{Find imputed comparisons}
 \usage{
 imputed_comparisons(feature_id, cond, metadata, df)
 }

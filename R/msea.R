@@ -14,7 +14,7 @@
 #' https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats
 #' for metabolite enrichment analysis with KEGG's pathways
 #' this file is embedded within the package:
-#' "/metstats/inst/kegg_msea.txt"
+#' "/metstats/inst/extdata/kegg_msea.txt"
 #'
 #' @param ranking_metric column name from input data
 #' to be used as the metric for enrichment analysis
@@ -194,13 +194,13 @@ pathway_enrichment <- function(data_input,
   if (metric_type == "abs") {
     enrichment_plot <- ggplot2::ggplot(
       enrich_sub,
-      aes(
+      ggplot2::aes(
         x = NES,
         y = pathway,
         size = -log10(pval)
       )
     ) +
-      ggplot2::geom_point(aes(colour = NES, size = -log10(pval))) +
+      ggplot2::geom_point(ggplot2::aes(colour = NES, size = -log10(pval))) +
       ggplot2::scale_color_gradient2(
         low = "white",
         high = "red", space = "Lab",
@@ -211,9 +211,9 @@ pathway_enrichment <- function(data_input,
   } else {
     enrichment_plot <- ggplot2::ggplot(
       enrich_sub,
-      aes(x = NES, y = pathway, size = -log10(pval))
+      ggplot2::aes(x = NES, y = pathway, size = -log10(pval))
     ) +
-      ggplot2::geom_point(aes(colour = NES, size = -log10(pval))) +
+      ggplot2::geom_point(ggplot2::aes(colour = NES, size = -log10(pval))) +
       ggplot2::scale_color_gradient2(
         low = "blue", mid = "white",
         high = "red", space = "Lab",

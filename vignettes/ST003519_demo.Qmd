@@ -61,9 +61,25 @@ library(metstats)
 ```
 
 ```{r experiment specific info}
-# the only chunk to change for a new dataset
-mzrolldb_file_path_pos <- "MZROLLDB_FILE_NAME_POS.mzrollDB"
-mzrolldb_file_path_neg <- "ST003519.mzrollDB"
+#mzrolldb_file_path_pos <- "MZROLLDB_FILE_NAME_POS.mzrollDB"
+mzrolldb_file_path_neg <- metstats::ST003519_mzroll()
+
+## import metadata
+metadata <- metstats::ST003519_metadata
+
+## assign the quant variable for the analysis
+quant_var <- "log2_abundance"
+
+## if another quant variable is desired for the analysis,
+## assign the string name to "quant_var" variable
+## For example:
+## quant_var <- "normalized_abundance"
+
+## Variable names for PCA
+var_names <- c("treatment")
+
+## Formula for regression model
+lm_formula <- paste(var_names, collapse = " + ")
 ```
 
 ```{r analysis type}
@@ -88,33 +104,6 @@ if (!grepl(".mzrollDB$", mzrolldb_file_path_pos) &&
   !grepl(".mzrollDB$", mzrolldb_file_path_neg)) {
   stop("Filenames should end with .mzrollDB")
 }
-```
-
-```{r quant variable}
-## determine quant variable for the analysis
-## run one of the following lines for non-normalized log2_abundance values
-## or median-polished (Probabilistic Quotient Normalization)
-
-## quant_var <- "median_log2_abundance"
-quant_var <- "log2_abundance"
-
-## if another quant variable is desired for the analysis,
-## assign the string name to "quant_var" variable
-## For example:
-## quant_var <- "drift_corrected_abundance"
-```
-
-```{r metadata}
-## import metadata
-metadata <- readRDS("ST003519_metadata.rds")
-```
-
-```{r variables and lm formula}
-## Variable names for PCA
-var_names <- c("treatment")
-
-## Formula for regression model
-lm_formula <- paste(var_names, collapse = " + ")
 ```
 
 ```{r themes}
@@ -463,7 +452,7 @@ plotly::as_widget(plotly::ggplotly(
 ```
 
 ```{r network plots, message = FALSE, warning = FALSE, eval = FALSE}
-id_mapping <- read.csv("ST003519_id_mapping.csv")
+id_mapping <- metstats::ST003519_id_mapping
 
 ## Generate global network plots of log2(Condition/RefCondition)
 for (i in condition_names) {

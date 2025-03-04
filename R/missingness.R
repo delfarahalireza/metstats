@@ -93,7 +93,9 @@ impute_missing_peaks <- function(mzroll_list,
   return(mzroll_list)
 }
 
-#' Find comparisons that have at least one imputed value
+#' Find imputed comparisons
+#'
+#' @description Find comparisons that have at least one imputed value
 #'
 #' @param feature_id groupId from mzrolldb
 #'
