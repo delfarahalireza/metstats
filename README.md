@@ -1,5 +1,5 @@
 # metstats
-Functions for statistical analysis of metabolomics data
+Library for standardized analysis and visualization of metabolomics data
 
 Calico Life Sciences, LLC
 

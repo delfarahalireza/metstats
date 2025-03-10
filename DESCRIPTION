@@ -1,5 +1,5 @@
 Package: metstats
-Title: Statistical analysis of metabolomics data
+Title: Library for standardized analysis and visualization of metabolomics data
 Version: 0.0.0.9000
 Authors@R: c(
     person(
