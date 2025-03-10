@@ -27,7 +27,7 @@ Authors@R: c(
       )
     )
 Maintainer: Alireza Delfarah <delfarah@calicolabs.com>
-Description: Functions for statistical analysis of metabolomics data.
+Description: Library for standardized analysis and visualization of metabolomics data.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
