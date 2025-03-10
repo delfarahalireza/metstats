@@ -9,8 +9,11 @@ Calico Life Sciences, LLC
 
 1. Convert mass spec raw files to mzML using [ProteWizard MSConvert](https://proteowizard.sourceforge.io/tools/msconvert.html) software.
 e.g. Metabolomics Workbench [ST003519](https://www.metabolomicsworkbench.org/data/DRCCMetadata.php?Mode=Study&DataMode=AllData&StudyID=ST003519&StudyType=MS&ResultType=1#DataTabs) for demo, raw files are already mzML.
+
 2. Run dataset through [MAVEN peakdetector](https://github.com/eugenemel/maven/releases) to generate ```mzrollDB``` file for peak identification and quantification.
+
 3. Open mzrollDB in [MAVEN 2 software](https://www.mdpi.com/2218-1989/12/8/684) and annotate peaks.
+
 4. Create a project folder and put the following files in the folder:
 - Annotated ```mzrollDB``` file
 - qmd file ```metstats/vignettes/ST003519_demo.Qmd``` for the demo
