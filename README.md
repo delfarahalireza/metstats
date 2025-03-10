@@ -24,6 +24,7 @@ e.g. Metabolomics Workbench [ST003519](https://www.metabolomicsworkbench.org/dat
 - Choose a folder name for the project/website.
 
 6. Render the qmd to see results in localhost.
+
 7. To publish results to Quarto pub, run the following in terminal:
 ```quarto publish quarto-pub ST003519_demo.qmd
 ```
