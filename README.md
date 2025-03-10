@@ -57,7 +57,3 @@ install.packages("cloned directory of RCy3", repos = NULL, type = "source")
 3. Open ```metstats/inst/extdata/Networks.cys``` file
 
 4. In R, run the ```network plots```, ```pathways color```, ```pathways shape```, and ```pathways``` chunks similar to ```metstats/vignettes/ST003519_demo.Qmd```
-
-
-
-
