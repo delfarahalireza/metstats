@@ -43,15 +43,15 @@ To run Cytoscape and generate metabolic networks:
 - Recommended method of installation:
 
 ```r
-# 1. Clone the RCy3 repository (if you haven't already)
+# Clone the RCy3 repository (if you haven't already)
 git clone git@github.com:delfarahalireza/RCy3.git
 
-# 2. Install the package from source
+# Install the package from source
 install.packages("cloned directory of RCy3", repos = NULL, type = "source")
 
-# 3. Restart R session
+# Restart R session
 
-# 4. Check that version of RCy3 is 2.5.1 after loading library(Rcy3)
+# Check that version of RCy3 is 2.5.1 after loading library(Rcy3)
 ```
 
 3. Open ```metstats/inst/extdata/Networks.cys``` file
