@@ -10,6 +10,7 @@ pathway_enrichment(
   feature_sets_file,
   ranking_metric,
   metric_type = "non-abs",
+  n_perm = 1000,
   pval = 1
 )
 }
@@ -26,13 +27,15 @@ standard GSEA tab-delimited text file format, see the link below:
 https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats
 for metabolite enrichment analysis with KEGG's pathways
 this file is embedded within the package:
-"/metstats/inst/kegg_msea.txt"}
+"/metstats/inst/extdata/kegg_msea.txt"}
 
 \item{ranking_metric}{column name from input data
 to be used as the metric for enrichment analysis}
 
 \item{metric_type}{type of the metric being used
 for enrichment analysis 'abs' or 'non-abs'}
+
+\item{n_perm}{number of permutations}
 
 \item{pval}{pvalue threshold to filter the enrichment results}
 }

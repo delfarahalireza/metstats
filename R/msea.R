@@ -22,6 +22,8 @@
 #' @param metric_type type of the metric being used
 #' for enrichment analysis 'abs' or 'non-abs'
 #'
+#' @param n_perm number of permutations
+#'
 #' @param pval pvalue threshold to filter the enrichment results
 #'
 #' @returns a list that contains
@@ -35,6 +37,7 @@ pathway_enrichment <- function(data_input,
                                feature_sets_file,
                                ranking_metric,
                                metric_type = "non-abs",
+                               n_perm = 1000,
                                pval = 1) {
   checkmate::assertString(id_column)
   checkmate::assertString(ranking_metric)
@@ -91,7 +94,7 @@ pathway_enrichment <- function(data_input,
   enrich_res <- fgsea::fgsea(
     pathways = enrichment_sets,
     stats = ranked_list_mut,
-    nPermSimple = 100000
+    nPermSimple = n_perm
   ) %>%
     as.data.frame() %>%
     dplyr::filter(padj < !!pval)
