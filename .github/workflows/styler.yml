@@ -2,12 +2,49 @@ name: R-styler-formatter
 
 on:
   workflow_dispatch:
+  pull_request:
   push:
     paths:
       - "/R/"
 
 jobs:
-  run-syler:
-    name: Check styler formatting
-    uses: calico/calico-github-actions/.github/workflows/r-style.yml@main
-    secrets: inherit
+  run-r-styler:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout base repo
+        uses: actions/checkout@v4
+
+      - name: Install R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.2"
+
+      - name: Install system dependencies (libcurl)
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev
+        shell: bash
+
+      - name: Install pak
+        run: Rscript -e 'install.packages("pak", repos = c(CRAN = "https://cloud.r-project.org/"))'
+        shell: bash
+
+      - name: Install styler and dependencies
+        run: Rscript -e 'pak::pkg_install(c("rlang", "vctrs", "cli", "purrr", "glue", "tibble", "dplyr", "tidyr", "styler", "roxygen2"))'
+        shell: bash
+
+      - name: Print R package versions
+        run: |
+          Rscript -e 'cat(paste0("styler: ", packageVersion("styler"), "\n"))'
+          Rscript -e 'cat(paste0("rlang: ", packageVersion("rlang"), "\n"))'
+          Rscript -e 'cat(paste0("vctrs: ", packageVersion("vctrs"), "\n"))'
+          Rscript -e 'cat(paste0("cli: ", packageVersion("cli"), "\n"))'
+        shell: bash
+
+      - name: Print workspace + working-dir contents
+        run: ls -alth '${{ github.workspace }}'
+        shell: bash
+
+      - name: Check Styler formatting with auto-format disabled
+        continue-on-error: false
+        run: Rscript -e "styler::style_pkg(pkg = '${{ github.workspace }}', dry = 'fail')"
+        shell: bash

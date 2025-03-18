@@ -285,10 +285,9 @@ fdr_multi <- function(term_data,
 #'
 #' @export
 volcano_plot <- function(
-  lm_data,
-  fdr_cutoff = 0.05,
-  feature_labels = NULL
-) {
+    lm_data,
+    fdr_cutoff = 0.05,
+    feature_labels = NULL) {
   checkmate::assertDataFrame(lm_data)
   stopifnot("term" %in% colnames(lm_data))
 
