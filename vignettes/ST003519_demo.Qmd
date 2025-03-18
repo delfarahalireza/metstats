@@ -61,7 +61,7 @@ library(metstats)
 ```
 
 ```{r experiment specific info}
-#mzrolldb_file_path_pos <- "MZROLLDB_FILE_NAME_POS.mzrollDB"
+# mzrolldb_file_path_pos <- "MZROLLDB_FILE_NAME_POS.mzrollDB"
 mzrolldb_file_path_neg <- metstats::ST003519_mzroll()
 
 ## import metadata
