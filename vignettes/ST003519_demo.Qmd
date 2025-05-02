@@ -52,7 +52,7 @@ if (!requireNamespace("claman", quietly = TRUE)) {
 }
 
 if (!requireNamespace("metstats", quietly = TRUE)) {
-  devtools::install_github("calico/metstats")
+  devtools::install_github("delfarahalireza/metstats")
 }
 ```
 
