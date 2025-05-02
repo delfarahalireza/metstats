@@ -3,7 +3,7 @@ Library for standardized analysis and visualization of metabolomics data
 
 Calico Life Sciences, LLC
 
-[Demo analysis of Metabolomics Workbench ST003519 published in quarto pub](https://delfarah.quarto.pub/metstats-demo---metabolomics-workbench-st003519-dd5a/)
+[Demo analysis of Metabolomics Workbench ST003519 published in quarto pub](https://delfarahalireza.quarto.pub/metstats-demo---metabolomics-workbench-st003519/)
 
 # Analysis workflow
 
