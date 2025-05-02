@@ -1,0 +1,69 @@
+url: https://calico.github.io/metstats/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+navbar:
+  structure:
+    left:  [home, reference, articles, news]
+    right: [github]
+  components:
+    home:
+      icon: fas fa-home fa-lg
+      href: index.html
+    reference:
+      text: Reference
+      href: reference/index.html
+    articles:
+      text: Articles
+      menu:
+      - text: "Demo Analysis: ST003519"
+        href: articles/ST003519_demo.html
+    github:
+      icon: fab fa-github fa-lg
+      href: https://github.com/calico/metstats
+
+reference:
+- title: "Data Import & Preprocessing"
+  desc: >
+    Functions for importing and preprocessing metabolomics data
+  contents:
+  - import_metadata
+  - check_metadata
+  - impute_missing_peaks
+  - find_outliers
+  - generate_complete_dataset
+
+- title: "Statistical Analysis"
+  desc: "Functions for statistical analysis of metabolomics data"
+  contents:
+  - lm_feature
+  - lm_multi
+  - lm_pool
+  - anova_multi_formula
+  - lmer_multi_formula
+  - coxph_model
+  - fdr
+  - fdr_multi
+  - imputed_comparisons
+  - metstats_elastic_net
+  - metstats_elastic_data_parse
+
+- title: "Pathway Analysis"
+  desc: "Functions for pathway enrichment analysis"
+  contents:
+  - pathway_enrichment
+
+- title: "Visualization"
+  desc: "Functions for visualizing metabolomics data and results"
+  contents:
+  - volcano_plot
+  - starts_with("cytoscape_")
+
+- title: "Datasets"
+  desc: "Example datasets included with the package"
+  contents:
+  - ST003519_id_mapping
+  - ST003519_metadata
+  - ST003519_mzroll
