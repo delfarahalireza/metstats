@@ -38,21 +38,22 @@ To run Cytoscape and generate metabolic networks:
 
 1. Download latest version of [Cytoscape](https://cytoscape.org/download.html)
 
-2. Install [RCy3 2.5.1](https://github.com/delfarahalireza/RCy3) Cytoscape-R API
+2. Install [RCy3 2.5.17](https://github.com/delfarahalireza/RCy3) Cytoscape-R API
 - Newer versions of RCy3 are problematic.
 - Recommended method of installation:
 
 ```r
-# Clone the RCy3 repository via terminal:
-git clone git@github.com:delfarahalireza/RCy3.git
-
-# Install the package from source in R:
-install.packages("cloned directory of RCy3", repos = NULL, type = "source")
+if (!requireNamespace("RCy3", quietly = TRUE)) {
+  devtools::install_github("delfarahalireza/RCy3")
+  } else if (packageVersion("RCy3") != "2.5.17") {
+    remove.packages("RCy3")
+    devtools::install_github("delfarahalireza/RCy3")
+  }
 
 # Restart R session and load RCy3
 library(RCy3)
 
-# Check that version of RCy3 is 2.5.1 after loading library(Rcy3)
+# Check that version of RCy3 is 2.5.17 after loading library(Rcy3)
 packageVersion("RCy3")
 
 ```
